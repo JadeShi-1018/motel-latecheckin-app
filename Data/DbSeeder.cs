@@ -2,15 +2,20 @@
 
 namespace LateCheckInApp.Data
 {
-  public static class DbSeeder
+  public class DbSeeder
   {
 
-    public static async Task SeedAdminUserAsync(IServiceProvider services)
+    private readonly IConfiguration _configuration;
+    public DbSeeder(IConfiguration configuration)
     {
-      var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+      _configuration = configuration;
+    }
+    public async Task SeedAdminUserAsync(UserManager<IdentityUser> userManager)
+    {
+      
 
-      var adminEmail = "info@essendonmotorinn.com.au";
-      var adminPassword = "Bulla93#";
+      var adminEmail = _configuration["AdminUser:Email"];
+      var adminPassword = _configuration["AdminUser:Password"];
 
       var existingUser = await userManager.FindByEmailAsync(adminEmail);
       if (existingUser != null)

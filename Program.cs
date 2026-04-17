@@ -22,6 +22,7 @@ if (string.IsNullOrWhiteSpace(stripeSection))
 StripeConfiguration.ApiKey = stripeSection;
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=latecheckin.db"));
+builder.Services.AddScoped<DbSeeder>();
 
 builder.Services
     .AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -67,7 +68,10 @@ app.MapRazorPages()
 using (var scope = app.Services.CreateScope())
 {
   var services = scope.ServiceProvider;
-  await DbSeeder.SeedAdminUserAsync(services);
+  var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+  var seeder = services.GetRequiredService<DbSeeder>();
+
+  await seeder.SeedAdminUserAsync(userManager);
 }
 
 app.Run();
