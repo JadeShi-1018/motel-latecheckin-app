@@ -1,0 +1,67 @@
+﻿@page "{id:int}"
+@model LateCheckInApp.Pages.Admin.RegistrationDetailsModel
+@{
+    ViewData["Title"] = "Registration Details";
+}
+
+<h1>Registration Details</h1>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="mb-3">
+    <a asp-page="/Admin/Registrations" class="btn btn-secondary">Back</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>@Model.Registration.FullName</h5>
+        <p><strong>Phone:</strong> @Model.Registration.PhoneNumber</p>
+        <p><strong>Email:</strong> @Model.Registration.Email</p>
+        <p><strong>Car Rego:</strong> @Model.Registration.CarRego</p>
+        <p><strong>Check-In:</strong> @Model.Registration.CheckInDate</p>
+        <p><strong>Check-Out:</strong> @Model.Registration.CheckOutDate</p>
+        <p><strong>Bond Amount:</strong> @Model.Registration.PreAuthAmount?.ToString("C")</p>
+        <p><strong>Stripe Status:</strong> @Model.Registration.PreAuthStatus</p>
+        <p><strong>Final Payment Status:</strong> @Model.Registration.FinalPaymentStatus</p>
+        <p><strong>PaymentIntent ID:</strong> @Model.Registration.PreAuthPaymentIntentId</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <h4>Photo ID</h4>
+        @if (!string.IsNullOrWhiteSpace(Model.Registration.PhotoIdPath))
+        {
+            <img src="@Model.Registration.PhotoIdPath" class="img-fluid border rounded" />
+        }
+    </div>
+
+    <div class="col-md-6">
+        <h4>Signature</h4>
+        @if (!string.IsNullOrWhiteSpace(Model.Registration.SignaturePath))
+        {
+            <img src="@Model.Registration.SignaturePath" class="img-fluid border rounded" />
+        }
+    </div>
+</div>
+
+@if (Model.Registration.FinalPaymentStatus == "Authorized")
+{
+    <div class="mt-4 d-flex gap-2">
+        <form method="post" asp-page-handler="Capture" asp-route-id="@Model.Registration.Id">
+            <button type="submit" class="btn btn-danger">Capture Bond</button>
+        </form>
+
+        <form method="post" asp-page-handler="Release" asp-route-id="@Model.Registration.Id">
+            <button type="submit" class="btn btn-success">Release Bond</button>
+        </form>
+    </div>
+}

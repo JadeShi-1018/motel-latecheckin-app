@@ -1,0 +1,15 @@
+﻿bin/
+obj/
+.vs/
+*.user
+*.suo
+appsettings.Development.json
+wwwroot/uploads/
+
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3

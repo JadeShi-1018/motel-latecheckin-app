@@ -1,0 +1,403 @@
+﻿@page
+@model LateCheckInApp.Pages.IndexModel
+@{
+    ViewData["Title"] = "Late Check-in Registration";
+}
+
+<h1>Late Check-in Registration</h1>
+<p>Please complete the form below before your arrival.</p>
+
+<form method="post" enctype="multipart/form-data" id="registrationForm">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <label asp-for="Registration.FullName" class="form-label">
+        Full Name <span class="text-danger">*</span>
+    </label>
+    <input asp-for="Registration.FullName" class="form-control" required />
+
+    <label asp-for="Registration.PhoneNumber" class="form-label">
+        Phone Number <span class="text-danger">*</span>
+    </label>
+    <input asp-for="Registration.PhoneNumber" class="form-control" required />
+
+    <div class="mb-3">
+        <label asp-for="Registration.Email" class="form-label">Email</label>
+        <input asp-for="Registration.Email" class="form-control" />
+        <span asp-validation-for="Registration.Email" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Registration.CarRego" class="form-label">Car Rego</label>
+        <input asp-for="Registration.CarRego" class="form-control" />
+        <span asp-validation-for="Registration.CarRego" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Registration.CheckInDate" class="form-label">
+            Check-In Date <span class="text-danger">*</span>
+        </label>
+        <input asp-for="Registration.CheckInDate" id="CheckIn" type="datetime-local" class="form-control"
+               value="@Model.Registration.CheckInDate.ToString("yyyy-MM-ddTHH:mm")" />
+        <span asp-validation-for="Registration.CheckInDate" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Registration.CheckOutDate" class="form-label">
+            Check-Out Date <span class="text-danger">*</span>
+        </label>
+        <input asp-for="Registration.CheckOutDate" id="CheckOut" type="datetime-local" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"
+               value="@Model.Registration.CheckOutDate.ToString("yyyy-MM-ddTHH:mm")" />
+        <span asp-validation-for="Registration.CheckOutDate" class="text-danger"></span>
+    </div>
+
+   
+
+    <div class="mb-3">
+        <label for="PhotoIdFile" class="form-label">Upload Photo ID <span class="text-danger">*</span></label>
+        <input asp-for="PhotoIdFile"
+               type="file"
+               class="form-control"
+               required
+               accept=".jpg,.jpeg,.png"
+               onchange="previewPhotoId(event)" />
+        <span asp-validation-for="PhotoIdFile" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3" id="photoPreviewContainer" style="display:none;">
+        <label class="form-label">Photo ID Preview</label>
+        <div>
+            <img id="photoPreview"
+                 src="#"
+                 alt="Photo ID Preview"
+                 class="img-fluid rounded border"
+                 style="max-width: 300px; max-height: 220px;" />
+        </div>
+    </div>
+
+    <input type="hidden" asp-for="CurrentTermsVersion" />
+    <input type="hidden" asp-for="CurrentTermsEffectiveFromUtc" />
+
+    <div class="mb-3">
+        <small class="text-muted">
+            Current Terms Version: @Model.CurrentTermsVersion
+            (Effective from @Model.CurrentTermsEffectiveFromUtc.ToLocalTime().ToString("dd MMM yyyy"))
+        </small>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="Registration.TermsAccepted" class="form-check-input" />
+        <label asp-for="Registration.TermsAccepted" class="form-check-label">
+            I accept the
+            <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">
+                Terms and Conditions (@Model.CurrentTermsVersion)
+            </a>.
+        </label>
+        <span class="text-danger">*</span>
+        <span asp-validation-for="Registration.TermsAccepted" class="text-danger"></span>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="Registration.DepositAuthorizationAccepted" class="form-check-input" />
+        <label asp-for="Registration.DepositAuthorizationAccepted" class="form-check-label">
+            I authorize the hotel to place a temporary security deposit hold on my payment card.
+        </label>
+        <span class="text-danger">*</span>
+        <span asp-validation-for="Registration.DepositAuthorizationAccepted" class="text-danger"></span>
+    </div>
+
+    <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="termsModalLabel">
+                        Terms and Conditions - @Model.CurrentTermsVersion
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        <strong>Effective From:</strong>
+                        @Model.CurrentTermsEffectiveFromUtc.ToLocalTime().ToString("dd MMM yyyy")
+                    </p>
+                    <hr />
+                    <pre style="white-space: pre-wrap; font-family: inherit;">@Model.CurrentTermsContent</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Electronic Signature <span class="text-danger">*</span></label>
+        <input type="hidden" asp-for="SignatureData" id="SignatureData" />
+        <canvas id="signaturePad" width="500" height="200" style="border:1px solid #ccc; border-radius:6px; width:100%; max-width:500px;"></canvas>
+        <div class="mt-2">
+            <button type="button" class="btn btn-secondary btn-sm" id="clearSignature">Clear Signature</button>
+        </div>
+        <span asp-validation-for="SignatureData" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">
+            Card Security Deposit Hold <span class="text-danger">*</span>
+        </label>
+        <div id="card-element" class="form-control p-3" style="height:auto;"></div>
+        <div id="card-errors" class="text-danger mt-2"></div>
+        <small class="text-muted">
+            A temporary security deposit hold will be placed on your card.
+        </small>
+    </div>
+
+    <input type="hidden" asp-for="PaymentIntentId" id="PaymentIntentId" />
+    <input type="hidden" asp-for="PreAuthSucceeded" id="PreAuthSucceeded" value="false" />
+
+    <button type="submit" class="btn btn-primary" id="submitButton">
+        <span id="submitButtonText">Submit</span>
+        <span id="submitButtonSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+    </button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        const checkInInput = document.getElementById("CheckIn");
+        const checkOutInput = document.getElementById("CheckOut");
+
+        function updateCheckOutMin() {
+            const checkInValue = checkInInput.value;
+
+            if (!checkInValue) return;
+
+            // min checkout  = checkin
+            checkOutInput.min = checkInValue;
+
+            // if checkout < checkin → change check out date = check in date
+            if (checkOutInput.value && checkOutInput.value <= checkInValue) {
+                checkOutInput.value = checkInValue;
+            }
+        }
+
+        // reload
+        updateCheckOutMin();
+
+        // run when checkin date change
+        checkInInput.addEventListener("change", updateCheckOutMin);
+    </script>
+
+    <script>
+        function previewPhotoId(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById("photoPreview");
+            const container = document.getElementById("photoPreviewContainer");
+
+            if (!file) {
+                preview.src = "#";
+                container.style.display = "none";
+                return;
+            }
+
+            const allowedTypes = ["image/jpeg", "image/png"];
+            if (!allowedTypes.includes(file.type)) {
+                preview.src = "#";
+                container.style.display = "none";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.src = e.target.result;
+                container.style.display = "block";
+            };
+
+            reader.readAsDataURL(file);
+        }
+    </script>
+
+    
+
+    <script>
+        const canvas = document.getElementById('signaturePad');
+        const clearButton = document.getElementById('clearSignature');
+        const signatureInput = document.getElementById('SignatureData');
+        const signatureForm = canvas.closest('form');
+
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let hasSignature = false;
+
+        function getMousePos(canvas, event) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+        }
+
+        function getTouchPos(canvas, touchEvent) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = touchEvent.touches[0];
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            };
+        }
+
+        function startDrawing(x, y) {
+            drawing = true;
+            console.log(hasSignature);
+            hasSignature = true;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(x, y) {
+            if (!drawing) return;
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            drawing = false;
+        }
+
+        canvas.addEventListener('mousedown', function (e) {
+            const pos = getMousePos(canvas, e);
+            startDrawing(pos.x, pos.y);
+        });
+
+        canvas.addEventListener('mousemove', function (e) {
+            const pos = getMousePos(canvas, e);
+            draw(pos.x, pos.y);
+        });
+
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', function (e) {
+            e.preventDefault();
+            const pos = getTouchPos(canvas, e);
+            startDrawing(pos.x, pos.y);
+        });
+
+        canvas.addEventListener('touchmove', function (e) {
+            e.preventDefault();
+            const pos = getTouchPos(canvas, e);
+            draw(pos.x, pos.y);
+        });
+
+        canvas.addEventListener('touchend', function (e) {
+            e.preventDefault();
+            stopDrawing();
+        });
+
+        clearButton.addEventListener('click', function () {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            signatureInput.value = '';
+        });
+
+        
+    </script>
+
+    <script>
+        const stripe = Stripe("@Model.StripePublishableKey");
+        const elements = stripe.elements();
+        const card = elements.create("card",{
+            hidePostalCode : true
+        });
+        card.mount("#card-element");
+        const form = document.getElementById('registrationForm');
+        const submitButton = document.getElementById('submitButton');
+        const submitButtonText = document.getElementById('submitButtonText');
+        const submitButtonSpinner = document.getElementById('submitButtonSpinner');
+
+        const paymentIntentIdInput = document.getElementById('PaymentIntentId');
+        const preAuthSucceededInput = document.getElementById('PreAuthSucceeded');
+        const cardErrors = document.getElementById('card-errors');
+
+        let isSubmitting = false;
+
+        async function createPreAuthIntent() {
+            const response = await fetch('/api/payments/create-preauth', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    amountInCents: 10000
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create pre-authorization.');
+            }
+
+            return await response.json();
+        }
+
+        form.addEventListener('submit', async function (e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return;
+            }
+
+            e.preventDefault();
+            cardErrors.textContent = '';
+
+            if (!hasSignature) {
+                alert('Please provide your signature before submitting.');
+                return;
+            }
+
+            const depositCheckbox = document.getElementById('Registration_DepositAuthorizationAccepted');
+            if (depositCheckbox && !depositCheckbox.checked) {
+                cardErrors.textContent = 'You must authorize the security deposit hold.';
+                return;
+            }
+
+            signatureInput.value = canvas.toDataURL('image/png');
+
+            submitButton.disabled = true;
+            submitButtonText.textContent = 'Processing...';
+            submitButtonSpinner.classList.remove('d-none');
+
+            try {
+                const preAuth = await createPreAuthIntent();
+
+                const result = await stripe.confirmCardPayment(preAuth.clientSecret, {
+                    payment_method: {
+                        card: card
+                    }
+                });
+
+                if (result.error) {
+                    cardErrors.textContent = result.error.message ?? 'Card pre-authorization failed.';
+                    submitButton.disabled = false;
+                    submitButtonText.textContent = 'Submit';
+                    submitButtonSpinner.classList.add('d-none');
+                    return;
+                }
+
+                if (!result.paymentIntent || result.paymentIntent.status !== 'requires_capture') {
+                    cardErrors.textContent = 'Card pre-authorization was not completed.';
+                    submitButton.disabled = false;
+                    submitButtonText.textContent = 'Submit';
+                    submitButtonSpinner.classList.add('d-none');
+                    return;
+                }
+
+                paymentIntentIdInput.value = result.paymentIntent.id;
+                preAuthSucceededInput.value = 'true';
+
+                isSubmitting = true;
+                form.submit();
+            } catch (error) {
+                cardErrors.textContent = error.message || 'Something went wrong.';
+                submitButton.disabled = false;
+                submitButtonText.textContent = 'Submit';
+                submitButtonSpinner.classList.add('d-none');
+            }
+        });
+    </script>
+}

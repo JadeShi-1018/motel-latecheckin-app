@@ -1,0 +1,68 @@
+﻿@page
+@model LateCheckInApp.Pages.Admin.RegistrationsModel
+@{
+    ViewData["Title"] = "Admin - Registrations";
+}
+
+<form method="post" asp-page="/Admin/Logout" class="mb-3">
+    <button type="submit" class="btn btn-outline-secondary">Logout</button>
+</form>
+<h1>Registrations</h1>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Guest</th>
+            <th>Check-In</th>
+            <th>Check-Out</th>
+            <th>Bond</th>
+            <th>Payment Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Registrations)
+        {
+            <tr>
+                <td>@item.FullName</td>
+                <td>@item.CheckInDate.ToString("dd MMM yyyy HH:mm")</td>
+                <td>@item.CheckOutDate.ToString("dd MMM yyyy HH:mm")</td>
+                <td>@item.PreAuthAmount?.ToString("C")</td>
+                <td>@item.FinalPaymentStatus</td>
+                <td>@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+                <td>
+                    <a asp-page="/Admin/RegistrationDetails" asp-route-id="@item.Id" class="btn btn-sm btn-info">
+                        Details
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Registrations pagination">
+        <ul class="pagination">
+            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="/Admin/Registrations" asp-route-pageNumber="@(Model.CurrentPage - 1)">
+                    Previous
+                </a>
+            </li>
+
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-page="/Admin/Registrations" asp-route-pageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="/Admin/Registrations" asp-route-pageNumber="@(Model.CurrentPage + 1)">
+                    Next
+                </a>
+            </li>
+        </ul>
+    </nav>
+}
