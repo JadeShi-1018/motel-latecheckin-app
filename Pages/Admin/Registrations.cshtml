@@ -3,10 +3,17 @@
 @{
     ViewData["Title"] = "Admin - Registrations";
 }
-
+<div class="mb-3 d-flex gap-2">
 <form method="post" asp-page="/Admin/Logout" class="mb-3">
     <button type="submit" class="btn btn-outline-secondary">Logout</button>
 </form>
+
+<a asp-page="/Admin/GenerateLink" class="btn btn-primary">
+    Generate Late Check-In Link
+</a>
+
+  
+</div>
 <h1>Registrations</h1>
 
 <table class="table table-bordered table-striped">

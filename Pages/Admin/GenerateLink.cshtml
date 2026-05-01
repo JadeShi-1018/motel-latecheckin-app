@@ -1,0 +1,29 @@
+﻿@page
+@model LateCheckInApp.Pages.Admin.GenerateLinkModel
+@{
+    ViewData["Title"] = "Generate Late Check-In Link";
+}
+
+<div class="mb-3">
+    <a asp-page="/Admin/Registrations" class="btn btn-secondary">Back</a>
+</div>
+
+<h1>Generate Late Check-In Link</h1>
+
+<form method="post" class="mt-3">
+    <div class="mb-3">
+        <label asp-for="ExpiryHours" class="form-label">Expiry Hours</label>
+        <input asp-for="ExpiryHours" class="form-control" />
+        <span asp-validation-for="ExpiryHours" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Generate Link</button>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.GeneratedLink))
+{
+    <div class="alert alert-success mt-3">
+        <p><strong>Generated Link:</strong></p>
+        <input type="text" class="form-control" value="@Model.GeneratedLink" readonly />
+    </div>
+}

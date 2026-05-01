@@ -1,6 +1,8 @@
 using LateCheckInApp.Data;
 using LateCheckInApp.Models;
+using LateCheckInApp.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +11,12 @@ namespace LateCheckInApp.Pages.Admin;
 public class RegistrationsModel : PageModel
 {
   private readonly AppDbContext _dbContext;
+  private readonly EmailService _emailService;
 
-  public RegistrationsModel(AppDbContext dbContext)
+  public RegistrationsModel(AppDbContext dbContext,EmailService emailService)
   {
     _dbContext = dbContext;
+    _emailService = emailService;
   }
 
   public List<GuestRegistration> Registrations { get; set; } = new();
@@ -40,4 +44,8 @@ public class RegistrationsModel : PageModel
         .Take(PageSize)
         .ToList();
   }
+
+  
+
+
 }

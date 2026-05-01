@@ -14,11 +14,11 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.0" />
+    <PackageReference Include="QuestPDF" Version="2025.7.4" />
     <PackageReference Include="Stripe.net" Version="50.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Services\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 

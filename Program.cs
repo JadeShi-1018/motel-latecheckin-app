@@ -1,13 +1,17 @@
 using LateCheckInApp.Data;
+using LateCheckInApp.Models;
+using LateCheckInApp.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Stripe;
+using QuestPDF.Infrastructure;
 
 
 
 SQLitePCL.Batteries.Init();
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = LicenseType.Community;
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -23,6 +27,11 @@ StripeConfiguration.ApiKey = stripeSection;
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=latecheckin.db"));
 builder.Services.AddScoped<DbSeeder>();
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<PDFService>();
 
 builder.Services
     .AddIdentity<IdentityUser, IdentityRole>(options =>

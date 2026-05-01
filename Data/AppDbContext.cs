@@ -12,6 +12,7 @@ namespace LateCheckInApp.Data
     }
 
     public DbSet<GuestRegistration> _guestRegistrations => Set<GuestRegistration>();
+    public DbSet<LateCheckInInvite> _lateCheckInInvites => Set<LateCheckInInvite>();
 
     
   }

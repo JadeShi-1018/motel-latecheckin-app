@@ -1,5 +1,6 @@
 ﻿using LateCheckInApp.Data;
 using LateCheckInApp.Models;
+using LateCheckInApp.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -14,12 +15,16 @@ public class IndexModel : PageModel
   private static readonly DateTime ServerTermsEffectiveFromUtc =
       new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
   private readonly IConfiguration _configuration;
+  private readonly EmailService _emailService;
+  private readonly PDFService _pDFService;
 
-  public IndexModel(AppDbContext dbContext, IWebHostEnvironment environment, IConfiguration configuration)
+  public IndexModel(AppDbContext dbContext, IWebHostEnvironment environment, IConfiguration configuration, EmailService emailService, PDFService pDFService)
   {
     _dbContext = dbContext;
     _environment = environment;
     _configuration = configuration;
+    _emailService = emailService;
+    _pDFService = pDFService;
   }
 
   [BindProperty]
@@ -69,19 +74,66 @@ Any violation of these Terms and Conditions may result in forfeiture of the secu
   [BindProperty]
   public IFormFile? PhotoIdFile { get; set; }
 
-  public void OnGet()
+  private void LoadPageData()
   {
+    CurrentTermsVersion = ServerTermsVersion;
+    CurrentTermsEffectiveFromUtc = ServerTermsEffectiveFromUtc;
+    StripePublishableKey = _configuration["Stripe:PublishableKey"] ?? string.Empty;
+  }
+
+  public async Task<IActionResult> OnGetAsync(string token)
+  {
+    if (string.IsNullOrWhiteSpace(token))
+      return NotFound();
+
+    var invite = await _dbContext._lateCheckInInvites
+        .FirstOrDefaultAsync(x => x.AccessToken == token);
+
+    if (invite == null)
+      return NotFound();
+
+    if (invite.ExpiresAtUtc < DateTime.UtcNow)
+      return BadRequest("This link has expired.");
+
+    if (invite.IsUsed)
+      return BadRequest("This form has already been submitted.");
+
+
     Registration = new GuestRegistration
     {
       CheckInDate = DateTime.Now,
-      CheckOutDate = DateTime.Now
+      CheckOutDate = DateTime.Now.AddDays(1)
     };
-    StripePublishableKey = _configuration["Stripe:PublishableKey"] ?? string.Empty;
+    LoadPageData();
+    return Page();
 
   }
 
-  public async Task<IActionResult> OnPostAsync()
+  public async Task<IActionResult> OnPostAsync(string token)
   {
+    var invite = await _dbContext._lateCheckInInvites
+        .FirstOrDefaultAsync(x => x.AccessToken == token);
+
+    if (invite == null)
+    {
+      ModelState.AddModelError(string.Empty, "Invalid access link.");
+      LoadPageData();
+      return Page();
+    }
+
+    if (invite.ExpiresAtUtc < DateTime.UtcNow)
+    {
+      ModelState.AddModelError(string.Empty, "This link has expired.");
+      LoadPageData();
+      return Page();
+    }
+
+    if (invite.IsUsed)
+    {
+      ModelState.AddModelError(string.Empty, "This form has already been submitted.");
+      LoadPageData();
+      return Page();
+    }
 
     if (!Registration.TermsAccepted) {
       ModelState.AddModelError("Registration.TermsAccepted",
@@ -97,6 +149,7 @@ if (!Registration.DepositAuthorizationAccepted)
     if (!PreAuthSucceeded || string.IsNullOrWhiteSpace(PaymentIntentId))
     {
       ModelState.AddModelError(string.Empty, "Card pre-authorization is required.");
+      LoadPageData();
       return Page();
     }
 
@@ -130,8 +183,7 @@ if (!Registration.DepositAuthorizationAccepted)
 
     if (!ModelState.IsValid)
     {
-      CurrentTermsVersion = ServerTermsVersion;
-      CurrentTermsEffectiveFromUtc = ServerTermsEffectiveFromUtc;
+      LoadPageData();
       return Page();
     }
     Registration.TermsAcceptedAtUtc = DateTime.UtcNow;
@@ -152,12 +204,14 @@ if (!Registration.DepositAuthorizationAccepted)
       if (!allowedExtensions.Contains(extension) || !allowedContentTypes.Contains(PhotoIdFile.ContentType))
       {
         ModelState.AddModelError("PhotoIdFile", "Only JPG, and PNG files are allowed.");
+        LoadPageData();
         return Page();
       }
 
       if (PhotoIdFile.Length > 5 * 1024 * 1024)
       {
         ModelState.AddModelError("PhotoIdFile", "File size must be less than 5MB.");
+        LoadPageData();
         return Page();
       }
 
@@ -205,6 +259,7 @@ if (!Registration.DepositAuthorizationAccepted)
       catch 
       {
         ModelState.AddModelError("SignatureData", "Invalid signature data.");
+        LoadPageData();
         return Page();
       }
     }
@@ -216,6 +271,7 @@ if (!Registration.DepositAuthorizationAccepted)
     if (intent == null || intent.Status != "requires_capture")
     {
       ModelState.AddModelError(string.Empty, "Card pre-authorization is invalid.");
+      LoadPageData();
       return Page();
     }
     Registration.PreAuthPaymentIntentId = PaymentIntentId;
@@ -227,7 +283,28 @@ if (!Registration.DepositAuthorizationAccepted)
     Registration.CreatedAt = DateTime.UtcNow;
 
     _dbContext._guestRegistrations.Add(Registration);
+    invite.IsUsed = true;
     await _dbContext.SaveChangesAsync();
+    var pdfPath = await _pDFService.GenerateLateCheckInSummaryPdfAsync(Registration);
+    string? photoIdPhysicalPath = null;
+    if (!string.IsNullOrWhiteSpace(Registration.PhotoIdPath))
+    {
+      photoIdPhysicalPath = Path.Combine(
+          _environment.WebRootPath,
+          Registration.PhotoIdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    string? signaturePhysicalPath = null;
+    if (!string.IsNullOrWhiteSpace(Registration.SignaturePath))
+    {
+      signaturePhysicalPath = Path.Combine(
+          _environment.WebRootPath,
+          Registration.SignaturePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    await _emailService.SendLateCheckInEmailAsync(Registration, pdfPath,photoIdPhysicalPath,signaturePhysicalPath);
+   
+  
 
     return RedirectToPage("/Success", new { id = Registration.Id });
   }
